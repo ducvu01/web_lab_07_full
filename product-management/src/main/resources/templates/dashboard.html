@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dashboard — Product Management</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 30px;
+        min-height: 100vh;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 10px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+      }
+      h1 {
+        color: #667eea;
+        margin-bottom: 18px;
+        text-align: center;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+      .card {
+        background: #f9fbff;
+        border-radius: 10px;
+        padding: 16px;
+        box-shadow: 0 6px 18px rgba(102, 126, 234, 0.06);
+      }
+      .card h3 {
+        margin-bottom: 8px;
+        color: #333;
+        font-size: 14px;
+      }
+      .stat {
+        font-size: 22px;
+        font-weight: 700;
+        color: #1f2937;
+      }
+      .wide {
+        grid-column: span 2;
+      }
+      .chart-wrap {
+        display: flex;
+        gap: 16px;
+        align-items: flex-start;
+      }
+      .list {
+        margin-top: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+      }
+      th,
+      td {
+        padding: 10px 8px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+        font-size: 13px;
+      }
+      th {
+        background: transparent;
+        color: #333;
+        font-weight: 600;
+      }
+      .low {
+        color: #d9534f;
+        font-weight: 600;
+      }
+      .small {
+        font-size: 12px;
+        color: #666;
+      }
+      @media (max-width: 900px) {
+        .grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+        .wide {
+          grid-column: span 2;
+        }
+      }
+      @media (max-width: 480px) {
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        .wide {
+          grid-column: span 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📊 Dashboard</h1>
+
+      <div class="grid">
+        <div class="card">
+          <h3>Total products</h3>
+          <div class="stat" th:text="${totalProducts}">0</div>
+          <div class="small">Total number of product SKUs</div>
+        </div>
+
+        <div class="card">
+          <h3>Total inventory value</h3>
+          <div
+            class="stat"
+            th:text="${#numbers.formatDecimal(totalInventoryValue, 1, 2)}"
+          >
+            $0.00
+          </div>
+          <div class="small">Sum of price * quantity</div>
+        </div>
+
+        <div class="card">
+          <h3>Average price</h3>
+          <div
+            class="stat"
+            th:text="${#numbers.formatDecimal(averagePrice, 1, 2)}"
+          >
+            $0.00
+          </div>
+          <div class="small">Average product price</div>
+        </div>
+
+        <div class="card">
+          <h3>Low stock alerts (&lt; 10)</h3>
+          <div class="stat" th:text="${#lists.size(lowStockProducts)}">0</div>
+          <div class="small">Products requiring attention</div>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="card wide">
+          <h3>Products by Category</h3>
+          <div class="chart-wrap">
+            <canvas id="categoryChart" width="400" height="200"></canvas>
+            <div style="min-width: 140px">
+              <ul id="categoryLegend" class="list">
+                <li th:each="entry : ${productsByCategory}">
+                  <strong th:text="${entry.key}">Category</strong>
+                  <span class="small"> — </span>
+                  <span th:text="${entry.value}">0</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <ul id="category-data" style="display: none">
+            <li th:each="entry : ${productsByCategory}">
+              <span class="label" th:text="${entry.key}"></span>
+              <span class="value" th:text="${entry.value}"></span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>Low stock products</h3>
+          <div class="list">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Qty</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="p : ${lowStockProducts}">
+                  <td th:text="${p.productCode}">P001</td>
+                  <td th:text="${p.name}">Example</td>
+                  <td
+                    th:text="${p.quantity}"
+                    th:classappend="${p.quantity &lt; 10} ? 'low' : ''"
+                  >
+                    0
+                  </td>
+                </tr>
+                <tr
+                  th:if="${lowStockProducts == null or #lists.isEmpty(lowStockProducts)}"
+                >
+                  <td colspan="3" class="small">No low stock products</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card wide">
+          <h3>Recent products (last 5 added)</h3>
+          <div class="list">
+            <table>
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Name</th>
+                  <th>Price</th>
+                  <th>Added</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr th:each="rp : ${recentProducts}">
+                  <td th:text="${rp.productCode}">P001</td>
+                  <td th:text="${rp.name}">Name</td>
+                  <td th:text="'$' + ${#numbers.formatDecimal(rp.price, 1, 2)}">
+                    $0.00
+                  </td>
+                  <td
+                    th:text="${rp.createdAt != null ? #temporals.format(rp.createdAt, 'yyyy-MM-dd HH:mm') : ''}"
+                  >
+                    2025-01-01 12:00
+                  </td>
+                </tr>
+                <tr
+                  th:if="${recentProducts == null or #lists.isEmpty(recentProducts)}"
+                >
+                  <td colspan="4" class="small">No recent products</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+      (function () {
+        const items = document.querySelectorAll("#category-data li");
+        const labels = [];
+        const values = [];
+        items.forEach((li) => {
+          const lbl = li.querySelector(".label").textContent.trim();
+          const val = parseInt(
+            li.querySelector(".value").textContent.trim() || "0",
+            10
+          );
+          labels.push(lbl);
+          values.push(val);
+        });
+
+        const ctx = document.getElementById("categoryChart").getContext("2d");
+        const bgColors = labels.map((_, i) => {
+          const hue = Math.floor((i * 47) % 360);
+          return `hsl(${hue} 70% 60%)`;
+        });
+
+        new Chart(ctx, {
+          type: "pie",
+          data: {
+            labels: labels,
+            datasets: [{ data: values, backgroundColor: bgColors }],
+          },
+          options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+          },
+        });
+      })();
+    </script>
+  </body>
+</html>
