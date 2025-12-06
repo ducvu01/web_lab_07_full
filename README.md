@@ -59,3 +59,14 @@ product-management/
 │
 ├── pom.xml (Maven dependencies)
 └── README.md
+
+
+## Database Schema
+See `schema.sql` for database structure.
+
+
+## Time Spent
+Approximately 4 hours
+
+## Screenshots
+See in the report.
